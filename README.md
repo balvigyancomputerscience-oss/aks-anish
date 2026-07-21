@@ -33,18 +33,24 @@ Bas `index.html` ko browser mein khol lo — site turant Supabase se data uthake
 4. Kuch minutes mein site live ho jayegi: `https://<username>.github.io/<repo-name>/`
 5. Admin panel available hoga: `https://<username>.github.io/<repo-name>/admin.html`
 
-## New: Per-trip photo galleries
-Each trip can now have its own set of photos — clicking **"View Gallery"** on any trip card (home page) opens a stylish popup showing just that trip's photos, with the trip title on top. Clicking a photo in the popup opens it full-size.
+## New: Photo albums for BOTH "Adventure Gallery" cards AND "Upcoming Trips"
+Clicking any card — a gallery photo or a trip — opens a stylish popup with just that card's own photos, with its title on top. Clicking a photo inside opens it full-size. No hover needed anywhere; titles are always visible on the cards.
 
-**If this is your first time setting up:** just run the updated `schema.sql` — it already includes this.
+**If this is your first time setting up:** just run the updated `schema.sql` — it already includes everything.
 
-**If you already ran the old `schema.sql` before:** run `migration-trip-images.sql` once in the Supabase SQL Editor (don't re-run the full `schema.sql`, or you'll get duplicate starter gallery/trip rows).
+**If you already ran the old `schema.sql` before:** run these two files once in the Supabase SQL Editor (in this order), each only once:
+1. `migration-trip-images.sql` (adds albums to Upcoming Trips)
+2. `migration-gallery-images.sql` (adds albums to Adventure Gallery)
 
-**To add photos to a trip from the admin panel:**
-1. Go to the **Upcoming Trips** tab
-2. On any trip card, click **"Manage Gallery Photos"**
-3. Choose one or more photos (multi-select supported) → **"Add Photos to Gallery"**
-4. Delete any photo anytime with the small ✕ on its thumbnail
+Don't re-run the full `schema.sql` on a project you already set up — you'll get duplicate starter rows.
+
+**To add photos to an album from the admin panel:**
+- **Trips tab** → any trip card → **"Manage Gallery Photos"**
+- **Gallery tab** → any gallery card → **"Manage Album Photos"**
+- Choose one or more photos (multi-select supported) → upload
+- Delete any photo anytime with the small ✕ on its thumbnail
+
+**If you don't see these changes on your live site:** make sure you've re-uploaded/pushed the latest `index.html`, `site.js`, `admin.html`, and `admin.js` from this folder — and do a hard refresh (Ctrl+Shift+R / Cmd+Shift+R) since browsers cache these files.
 
 ## Important notes
 - Supabase **anon/public key** ko `config.js` mein rakhna safe hai — ye key sirf **read** kar sakti hai jab tak koi login na kare (Row Level Security ki wajah se). Sirf logged-in admin hi write/edit/delete kar sakta hai.

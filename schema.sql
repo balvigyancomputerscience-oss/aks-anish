@@ -33,6 +33,15 @@ create table if not exists gallery (
   created_at timestamptz default now()
 );
 
+-- ---------- GALLERY ALBUM PHOTOS (multiple photos per gallery card) ----------
+create table if not exists gallery_images (
+  id uuid primary key default uuid_generate_v4(),
+  gallery_id uuid references gallery(id) on delete cascade,
+  image_url text not null,
+  sort_order int default 0,
+  created_at timestamptz default now()
+);
+
 -- ---------- UPCOMING TRIPS ----------
 create table if not exists trips (
   id uuid primary key default uuid_generate_v4(),
@@ -76,6 +85,12 @@ drop policy if exists "public read trips" on trips;
 create policy "public read trips" on trips for select using (true);
 drop policy if exists "auth write trips" on trips;
 create policy "auth write trips" on trips for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+
+alter table gallery_images enable row level security;
+drop policy if exists "public read gallery_images" on gallery_images;
+create policy "public read gallery_images" on gallery_images for select using (true);
+drop policy if exists "auth write gallery_images" on gallery_images;
+create policy "auth write gallery_images" on gallery_images for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
 
 alter table trip_images enable row level security;
 drop policy if exists "public read trip_images" on trip_images;

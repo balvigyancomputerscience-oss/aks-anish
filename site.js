@@ -132,7 +132,7 @@ async function loadGallery() {
         }
 
         grid.innerHTML = data.map(item => `
-            <div class="gallery-item relative rounded-2xl overflow-hidden shadow-lg cursor-pointer group">
+            <div class="gallery-item relative rounded-2xl overflow-hidden shadow-lg cursor-pointer group" data-gallery-id="${item.id}" data-gallery-title="${escapeHtml(item.title)}" data-gallery-subtitle="${escapeHtml(item.subtitle || '')}">
                 <img src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.title)}" class="gallery-img w-full h-80 object-cover">
                 <div class="absolute inset-0 bg-gradient-to-t from-navy/90 via-navy/10 to-transparent">
                     <div class="absolute bottom-6 left-6 right-6 text-white">
@@ -142,6 +142,12 @@ async function loadGallery() {
                 </div>
             </div>
         `).join('');
+
+        document.querySelectorAll('.gallery-item').forEach(el => {
+            el.addEventListener('click', () => {
+                openAlbumModal('gallery_images', 'gallery_id', el.dataset.galleryId, el.dataset.galleryTitle, el.dataset.gallerySubtitle);
+            });
+        });
     } catch (err) {
         console.warn('Could not load gallery from Supabase.', err);
         grid.innerHTML = `<p class="col-span-full text-center text-navy/50">Gallery coming soon.</p>`;
@@ -193,7 +199,7 @@ async function loadTrips() {
 
         document.querySelectorAll('.trip-open-gallery').forEach(el => {
             el.addEventListener('click', () => {
-                openTripModal(el.dataset.tripId, el.dataset.tripTitle, el.dataset.tripCategory);
+                openAlbumModal('trip_images', 'trip_id', el.dataset.tripId, el.dataset.tripTitle, el.dataset.tripCategory);
             });
         });
     } catch (err) {
@@ -210,7 +216,7 @@ function escapeHtml(str) {
 }
 
 // ============================================================
-// Trip Gallery Modal — shows every photo for one specific trip
+// Album Modal — shows every photo for one specific trip OR gallery card
 // ============================================================
 function initTripModal() {
     const modal = document.getElementById('trip-modal');
@@ -226,23 +232,23 @@ function initTripModal() {
     });
 }
 
-async function openTripModal(tripId, title, category) {
+async function openAlbumModal(table, foreignKey, id, title, subtitle) {
     const modal = document.getElementById('trip-modal');
     const grid = document.getElementById('trip-modal-grid');
     document.getElementById('trip-modal-title').textContent = title || '';
-    document.getElementById('trip-modal-category').textContent = category || '';
+    document.getElementById('trip-modal-category').textContent = subtitle || '';
     grid.innerHTML = `<div class="col-span-full text-center text-white/60 py-10">Loading photos...</div>`;
     modal.classList.remove('hidden');
 
     try {
         const { data, error } = await supabaseClient
-            .from('trip_images')
+            .from(table)
             .select('*')
-            .eq('trip_id', tripId)
+            .eq(foreignKey, id)
             .order('sort_order', { ascending: true });
 
         if (error || !data || data.length === 0) {
-            grid.innerHTML = `<div class="col-span-full text-center text-white/60 py-10">No extra photos added for this trip yet.</div>`;
+            grid.innerHTML = `<div class="col-span-full text-center text-white/60 py-10">No extra photos added yet.</div>`;
             return;
         }
 

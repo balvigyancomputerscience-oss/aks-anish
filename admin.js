@@ -163,7 +163,18 @@ async function loadGalleryList() {
             <div class="p-4">
                 <h3 class="font-bold">${escapeHtml(item.title)}</h3>
                 <p class="text-sm text-navy/50 mb-3">${escapeHtml(item.subtitle || '')}</p>
+                <button class="bg-navy text-white text-sm px-4 py-2 rounded-lg w-full mb-2" onclick="togglePhotoManager('gallery', '${item.id}')">
+                    <i class="fa-solid fa-images mr-1"></i> Manage Album Photos
+                </button>
                 <button class="btn-danger text-sm px-4 py-2 rounded-lg w-full" onclick="deleteGalleryItem('${item.id}')">Delete</button>
+
+                <div id="gallery-photo-manager-${item.id}" class="hidden mt-4 pt-4 border-t border-navy/10">
+                    <div id="gallery-photo-thumbs-${item.id}" class="grid grid-cols-3 gap-2 mb-3"></div>
+                    <input type="file" id="gallery-photo-file-${item.id}" accept="image/*" multiple class="w-full text-xs mb-2">
+                    <button class="btn-primary text-sm px-4 py-2 rounded-lg w-full flex items-center justify-center gap-2" onclick="uploadAlbumPhotos('gallery', '${item.id}')">
+                        <span>Add Photos to Album</span><span id="gallery-photo-spinner-${item.id}" class="spinner hidden"></span>
+                    </button>
+                </div>
             </div>
         </div>
     `).join('');
@@ -195,10 +206,81 @@ async function addGalleryItem() {
 }
 
 async function deleteGalleryItem(id) {
-    if (!confirm('Delete this gallery photo?')) return;
+    if (!confirm('Delete this gallery photo? This also removes its full photo album.')) return;
     const { error } = await supabaseClient.from('gallery').delete().eq('id', id);
     if (error) { alert(error.message); return; }
     loadGalleryList();
+}
+
+// ---------- Shared album config (trips + gallery both use this) ----------
+const ALBUM_CONFIG = {
+    trip: { table: 'trip_images', foreignKey: 'trip_id' },
+    gallery: { table: 'gallery_images', foreignKey: 'gallery_id' }
+};
+
+async function togglePhotoManager(kind, id) {
+    const panel = document.getElementById(`${kind}-photo-manager-${id}`);
+    panel.classList.toggle('hidden');
+    if (!panel.classList.contains('hidden')) {
+        loadAlbumPhotos(kind, id);
+    }
+}
+
+async function loadAlbumPhotos(kind, id) {
+    const { table, foreignKey } = ALBUM_CONFIG[kind];
+    const thumbs = document.getElementById(`${kind}-photo-thumbs-${id}`);
+    thumbs.innerHTML = `<p class="col-span-3 text-xs text-navy/40">Loading...</p>`;
+    const { data, error } = await supabaseClient
+        .from(table)
+        .select('*')
+        .eq(foreignKey, id)
+        .order('sort_order', { ascending: true });
+
+    if (error) { thumbs.innerHTML = `<p class="col-span-3 text-xs text-red-500">${error.message}</p>`; return; }
+    if (!data || data.length === 0) { thumbs.innerHTML = `<p class="col-span-3 text-xs text-navy/40">No photos in this album yet.</p>`; return; }
+
+    thumbs.innerHTML = data.map(img => `
+        <div class="relative group">
+            <img src="${img.image_url}" class="w-full h-16 object-cover rounded">
+            <button onclick="deleteAlbumImage('${kind}', '${img.id}', '${id}')" class="absolute -top-1.5 -right-1.5 bg-red-500 text-white w-5 h-5 rounded-full text-xs flex items-center justify-center">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+    `).join('');
+}
+
+async function uploadAlbumPhotos(kind, id) {
+    const { table, foreignKey } = ALBUM_CONFIG[kind];
+    const fileInput = document.getElementById(`${kind}-photo-file-${id}`);
+    const spinner = document.getElementById(`${kind}-photo-spinner-${id}`);
+    const files = Array.from(fileInput.files);
+    if (files.length === 0) { alert('Select at least one photo first.'); return; }
+
+    spinner.classList.remove('hidden');
+    try {
+        for (const file of files) {
+            const imageUrl = await uploadImage(file);
+            const record = { image_url: imageUrl, sort_order: 999 };
+            record[foreignKey] = id;
+            const { error } = await supabaseClient.from(table).insert(record);
+            if (error) throw error;
+        }
+        fileInput.value = '';
+        loadAlbumPhotos(kind, id);
+        showToast('Photos added!');
+    } catch (err) {
+        alert('Error: ' + err.message);
+    } finally {
+        spinner.classList.add('hidden');
+    }
+}
+
+async function deleteAlbumImage(kind, imageId, id) {
+    const { table } = ALBUM_CONFIG[kind];
+    if (!confirm('Remove this photo from the album?')) return;
+    const { error } = await supabaseClient.from(table).delete().eq('id', imageId);
+    if (error) { alert(error.message); return; }
+    loadAlbumPhotos(kind, id);
 }
 
 // ---------- Trips ----------
@@ -216,82 +298,21 @@ async function loadTripsList() {
                 <h3 class="font-bold">${escapeHtml(trip.title)}</h3>
                 <p class="text-sm text-navy/50 mb-2">${escapeHtml(trip.description || '')}</p>
                 <p class="font-bold mb-3">${escapeHtml(trip.price || '')}</p>
-                <button class="bg-navy text-white text-sm px-4 py-2 rounded-lg w-full mb-2" onclick="togglePhotoManager('${trip.id}')">
+                <button class="bg-navy text-white text-sm px-4 py-2 rounded-lg w-full mb-2" onclick="togglePhotoManager('trip', '${trip.id}')">
                     <i class="fa-solid fa-images mr-1"></i> Manage Gallery Photos
                 </button>
                 <button class="btn-danger text-sm px-4 py-2 rounded-lg w-full" onclick="deleteTripItem('${trip.id}')">Delete Trip</button>
 
-                <div id="photo-manager-${trip.id}" class="hidden mt-4 pt-4 border-t border-navy/10">
-                    <div id="photo-thumbs-${trip.id}" class="grid grid-cols-3 gap-2 mb-3"></div>
-                    <input type="file" id="photo-file-${trip.id}" accept="image/*" multiple class="w-full text-xs mb-2">
-                    <button class="btn-primary text-sm px-4 py-2 rounded-lg w-full flex items-center justify-center gap-2" onclick="uploadTripPhotos('${trip.id}')">
-                        <span>Add Photos to Gallery</span><span id="photo-spinner-${trip.id}" class="spinner hidden"></span>
+                <div id="trip-photo-manager-${trip.id}" class="hidden mt-4 pt-4 border-t border-navy/10">
+                    <div id="trip-photo-thumbs-${trip.id}" class="grid grid-cols-3 gap-2 mb-3"></div>
+                    <input type="file" id="trip-photo-file-${trip.id}" accept="image/*" multiple class="w-full text-xs mb-2">
+                    <button class="btn-primary text-sm px-4 py-2 rounded-lg w-full flex items-center justify-center gap-2" onclick="uploadAlbumPhotos('trip', '${trip.id}')">
+                        <span>Add Photos to Gallery</span><span id="trip-photo-spinner-${trip.id}" class="spinner hidden"></span>
                     </button>
                 </div>
             </div>
         </div>
     `).join('');
-}
-
-// ---------- Per-trip photo gallery management ----------
-async function togglePhotoManager(tripId) {
-    const panel = document.getElementById('photo-manager-' + tripId);
-    panel.classList.toggle('hidden');
-    if (!panel.classList.contains('hidden')) {
-        loadTripPhotos(tripId);
-    }
-}
-
-async function loadTripPhotos(tripId) {
-    const thumbs = document.getElementById('photo-thumbs-' + tripId);
-    thumbs.innerHTML = `<p class="col-span-3 text-xs text-navy/40">Loading...</p>`;
-    const { data, error } = await supabaseClient
-        .from('trip_images')
-        .select('*')
-        .eq('trip_id', tripId)
-        .order('sort_order', { ascending: true });
-
-    if (error) { thumbs.innerHTML = `<p class="col-span-3 text-xs text-red-500">${error.message}</p>`; return; }
-    if (!data || data.length === 0) { thumbs.innerHTML = `<p class="col-span-3 text-xs text-navy/40">No gallery photos yet.</p>`; return; }
-
-    thumbs.innerHTML = data.map(img => `
-        <div class="relative group">
-            <img src="${img.image_url}" class="w-full h-16 object-cover rounded">
-            <button onclick="deleteTripImage('${img.id}', '${tripId}')" class="absolute -top-1.5 -right-1.5 bg-red-500 text-white w-5 h-5 rounded-full text-xs flex items-center justify-center">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-        </div>
-    `).join('');
-}
-
-async function uploadTripPhotos(tripId) {
-    const fileInput = document.getElementById('photo-file-' + tripId);
-    const spinner = document.getElementById('photo-spinner-' + tripId);
-    const files = Array.from(fileInput.files);
-    if (files.length === 0) { alert('Select at least one photo first.'); return; }
-
-    spinner.classList.remove('hidden');
-    try {
-        for (const file of files) {
-            const imageUrl = await uploadImage(file);
-            const { error } = await supabaseClient.from('trip_images').insert({ trip_id: tripId, image_url: imageUrl, sort_order: 999 });
-            if (error) throw error;
-        }
-        fileInput.value = '';
-        loadTripPhotos(tripId);
-        showToast('Gallery photos added!');
-    } catch (err) {
-        alert('Error: ' + err.message);
-    } finally {
-        spinner.classList.add('hidden');
-    }
-}
-
-async function deleteTripImage(imageId, tripId) {
-    if (!confirm('Remove this photo from the gallery?')) return;
-    const { error } = await supabaseClient.from('trip_images').delete().eq('id', imageId);
-    if (error) { alert(error.message); return; }
-    loadTripPhotos(tripId);
 }
 
 async function addTripItem() {
