@@ -33,6 +33,19 @@ Bas `index.html` ko browser mein khol lo — site turant Supabase se data uthake
 4. Kuch minutes mein site live ho jayegi: `https://<username>.github.io/<repo-name>/`
 5. Admin panel available hoga: `https://<username>.github.io/<repo-name>/admin.html`
 
+## New: Per-trip photo galleries
+Each trip can now have its own set of photos — clicking **"View Gallery"** on any trip card (home page) opens a stylish popup showing just that trip's photos, with the trip title on top. Clicking a photo in the popup opens it full-size.
+
+**If this is your first time setting up:** just run the updated `schema.sql` — it already includes this.
+
+**If you already ran the old `schema.sql` before:** run `migration-trip-images.sql` once in the Supabase SQL Editor (don't re-run the full `schema.sql`, or you'll get duplicate starter gallery/trip rows).
+
+**To add photos to a trip from the admin panel:**
+1. Go to the **Upcoming Trips** tab
+2. On any trip card, click **"Manage Gallery Photos"**
+3. Choose one or more photos (multi-select supported) → **"Add Photos to Gallery"**
+4. Delete any photo anytime with the small ✕ on its thumbnail
+
 ## Important notes
 - Supabase **anon/public key** ko `config.js` mein rakhna safe hai — ye key sirf **read** kar sakti hai jab tak koi login na kare (Row Level Security ki wajah se). Sirf logged-in admin hi write/edit/delete kar sakta hai.
 - Har visitor ko same live data dikhega (localStorage nahi, real database hai) — admin panel se koi bhi change turant sabko dikhega.

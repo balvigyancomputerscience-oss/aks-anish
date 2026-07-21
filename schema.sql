@@ -45,6 +45,15 @@ create table if not exists trips (
   created_at timestamptz default now()
 );
 
+-- ---------- TRIP GALLERY IMAGES (multiple photos per trip) ----------
+create table if not exists trip_images (
+  id uuid primary key default uuid_generate_v4(),
+  trip_id uuid references trips(id) on delete cascade,
+  image_url text not null,
+  sort_order int default 0,
+  created_at timestamptz default now()
+);
+
 -- ============================================================
 -- ROW LEVEL SECURITY
 -- Public (anon) can only READ. Only logged-in admin can write.
@@ -67,6 +76,12 @@ drop policy if exists "public read trips" on trips;
 create policy "public read trips" on trips for select using (true);
 drop policy if exists "auth write trips" on trips;
 create policy "auth write trips" on trips for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+
+alter table trip_images enable row level security;
+drop policy if exists "public read trip_images" on trip_images;
+create policy "public read trip_images" on trip_images for select using (true);
+drop policy if exists "auth write trip_images" on trip_images;
+create policy "auth write trip_images" on trip_images for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
 
 -- ============================================================
 -- STORAGE BUCKET for uploaded images (gallery/trip/hero photos)
@@ -103,4 +118,20 @@ insert into trips (category, title, description, price, image_url, sort_order) v
 ('HIMALAYAN TREK', 'Kedarkantha Trek', 'A snow-clad winter trek through pine forests to a 360° Himalayan summit.', '₹8,500', 'https://images.pexels.com/photos/1365425/pexels-photo-1365425.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=600&w=600', 1),
 ('WEEKEND CAMP', 'Rishikesh River Camp', 'Riverside camping with bonfire nights and white-water rafting by day.', '₹3,200', 'https://images.pexels.com/photos/2398220/pexels-photo-2398220.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=600&w=600', 2),
 ('JUNGLE EXPEDITION', 'Western Ghats Trail', 'Dense forest trails, waterfalls and wildlife spotting in monsoon green.', '₹5,400', 'https://images.pexels.com/photos/1666021/pexels-photo-1666021.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=600&w=600', 3)
+on conflict do nothing;
+
+-- Extra starter photos for each seeded trip's gallery (safe to skip if trips already existed)
+insert into trip_images (trip_id, image_url, sort_order)
+select t.id, img.url, img.ord
+from trips t
+join (values
+  ('Kedarkantha Trek', 'https://images.pexels.com/photos/1365425/pexels-photo-1365425.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=800&w=800', 1),
+  ('Kedarkantha Trek', 'https://images.pexels.com/photos/1287145/pexels-photo-1287145.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=800&w=800', 2),
+  ('Kedarkantha Trek', 'https://images.pexels.com/photos/1671324/pexels-photo-1671324.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=800&w=800', 3),
+  ('Rishikesh River Camp', 'https://images.pexels.com/photos/2398220/pexels-photo-2398220.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=800&w=800', 1),
+  ('Rishikesh River Camp', 'https://images.pexels.com/photos/1450082/pexels-photo-1450082.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=800&w=800', 2),
+  ('Western Ghats Trail', 'https://images.pexels.com/photos/1666021/pexels-photo-1666021.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=800&w=800', 1),
+  ('Western Ghats Trail', 'https://images.pexels.com/photos/1671324/pexels-photo-1671324.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=800&w=800', 2)
+) as img(trip_title, url, ord) on img.trip_title = t.title
+where not exists (select 1 from trip_images ti where ti.trip_id = t.id)
 on conflict do nothing;
