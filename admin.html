@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AKS Admin Panel</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" href="assets/logo.jpg">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --navy: #1C3D5A; --turquoise: #77C9D4; --teal: #57A99A; --amber: #F0A500; --cream: #FDF5E6;
+        }
+        body { font-family: 'Inter', sans-serif; background: var(--cream); color: var(--navy); }
+        h1, h2, .font-serif { font-family: 'Playfair Display', serif; }
+        .bg-navy { background-color: var(--navy); } .bg-teal { background-color: var(--teal); }
+        .bg-amber { background-color: var(--amber); } .text-navy { color: var(--navy); }
+        .text-teal { color: var(--teal); } .border-amber { border-color: var(--amber); }
+        .tab-btn.active { background: var(--navy); color: white; }
+        .btn-primary { background: var(--amber); color: var(--navy); font-weight: 700; transition: .2s; }
+        .btn-primary:hover { background: #d99200; }
+        .btn-danger { background: #e5484d; color: white; }
+        .btn-danger:hover { background: #c93b3f; }
+        input, textarea { border: 1px solid rgba(28,61,90,.15); }
+        input:focus, textarea:focus { outline: none; border-color: var(--teal); box-shadow: 0 0 0 3px rgba(87,169,154,.2); }
+        .card { background: white; border-radius: 1rem; box-shadow: 0 6px 20px -6px rgba(28,61,90,.15); }
+        .spinner { border: 3px solid rgba(0,0,0,.1); border-top-color: var(--amber); border-radius: 50%; width: 18px; height: 18px; animation: spin .7s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <!-- ===================== LOGIN SCREEN ===================== -->
+    <div id="login-screen" class="min-h-screen flex items-center justify-center px-4">
+        <div class="card w-full max-w-md p-10 text-center">
+            <img src="assets/logo.jpg" alt="AKS" class="w-20 h-20 rounded-full mx-auto mb-4 border-2 border-amber object-cover">
+            <h1 class="text-2xl font-bold mb-1">AKS Admin Panel</h1>
+            <p class="text-navy/50 text-sm mb-8">Sign in to manage your website content</p>
+            <form id="login-form" class="space-y-4 text-left">
+                <div>
+                    <label class="block text-sm font-semibold mb-1">Email</label>
+                    <input id="login-email" type="email" required class="w-full px-4 py-3 rounded-lg">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-1">Password</label>
+                    <input id="login-password" type="password" required class="w-full px-4 py-3 rounded-lg">
+                </div>
+                <p id="login-error" class="text-red-500 text-sm hidden"></p>
+                <button type="submit" class="btn-primary w-full py-3 rounded-lg flex items-center justify-center gap-2">
+                    <span id="login-btn-text">Sign In</span>
+                    <span id="login-spinner" class="spinner hidden"></span>
+                </button>
+            </form>
+            <p class="text-xs text-navy/40 mt-6">Admin accounts are created from the Supabase Dashboard → Authentication → Users. See README.md.</p>
+        </div>
+    </div>
+
+    <!-- ===================== ADMIN DASHBOARD ===================== -->
+    <div id="dashboard" class="hidden min-h-screen">
+        <header class="bg-navy text-white">
+            <div class="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
+                <a href="index.html" class="flex items-center gap-3">
+                    <img src="assets/logo.jpg" class="w-10 h-10 rounded-full border-2 border-amber object-cover">
+                    <span class="font-serif font-bold text-lg">AKS Admin</span>
+                </a>
+                <div class="flex items-center gap-4">
+                    <a href="index.html" target="_blank" class="text-white/70 hover:text-amber text-sm"><i class="fa-solid fa-arrow-up-right-from-square mr-1"></i>View Site</a>
+                    <button id="logout-btn" class="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg text-sm">Logout</button>
+                </div>
+            </div>
+        </header>
+
+        <div class="max-w-6xl mx-auto px-6 py-8">
+            <!-- Tabs -->
+            <div class="flex flex-wrap gap-2 mb-8">
+                <button class="tab-btn active px-5 py-2.5 rounded-full font-semibold text-sm bg-white" data-tab="hero">Hero</button>
+                <button class="tab-btn px-5 py-2.5 rounded-full font-semibold text-sm bg-white" data-tab="about">About</button>
+                <button class="tab-btn px-5 py-2.5 rounded-full font-semibold text-sm bg-white" data-tab="contact">Contact &amp; Footer</button>
+                <button class="tab-btn px-5 py-2.5 rounded-full font-semibold text-sm bg-white" data-tab="gallery">Gallery</button>
+                <button class="tab-btn px-5 py-2.5 rounded-full font-semibold text-sm bg-white" data-tab="trips">Upcoming Trips</button>
+            </div>
+
+            <div id="save-toast" class="hidden mb-6 bg-teal text-white px-5 py-3 rounded-lg font-medium"></div>
+
+            <!-- HERO TAB -->
+            <div class="tab-panel" id="tab-hero">
+                <div class="card p-8 max-w-2xl">
+                    <h2 class="text-xl font-bold mb-6">Hero Section</h2>
+                    <div class="space-y-5">
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">Hero Title</label>
+                            <input id="hero_title" class="w-full px-4 py-3 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">Hero Subtitle</label>
+                            <textarea id="hero_subtitle" rows="2" class="w-full px-4 py-3 rounded-lg"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">Hero Background Image</label>
+                            <img id="hero_image_url-preview" class="w-full h-40 object-cover rounded-lg mb-2 hidden">
+                            <input type="file" id="hero_image_url-file" accept="image/*" class="w-full text-sm">
+                            <input type="hidden" id="hero_image_url">
+                        </div>
+                        <button id="save-hero" class="btn-primary px-8 py-3 rounded-lg">Save Hero Section</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ABOUT TAB -->
+            <div class="tab-panel hidden" id="tab-about">
+                <div class="card p-8 max-w-2xl">
+                    <h2 class="text-xl font-bold mb-6">About Section</h2>
+                    <div class="space-y-5">
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">About Title</label>
+                            <input id="about_title" class="w-full px-4 py-3 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">About Text</label>
+                            <textarea id="about_text" rows="4" class="w-full px-4 py-3 rounded-lg"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">About Image</label>
+                            <img id="about_image_url-preview" class="w-full h-40 object-cover rounded-lg mb-2 hidden">
+                            <input type="file" id="about_image_url-file" accept="image/*" class="w-full text-sm">
+                            <input type="hidden" id="about_image_url">
+                        </div>
+                        <button id="save-about" class="btn-primary px-8 py-3 rounded-lg">Save About Section</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CONTACT & FOOTER TAB -->
+            <div class="tab-panel hidden" id="tab-contact">
+                <div class="card p-8 max-w-2xl">
+                    <h2 class="text-xl font-bold mb-6">Contact &amp; Footer</h2>
+                    <div class="space-y-5">
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">Phone</label>
+                            <input id="contact_phone" class="w-full px-4 py-3 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">Email</label>
+                            <input id="contact_email" class="w-full px-4 py-3 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">Address / Base Camp</label>
+                            <input id="contact_address" class="w-full px-4 py-3 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">Working Hours</label>
+                            <input id="contact_hours" class="w-full px-4 py-3 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">Footer Description</label>
+                            <textarea id="footer_text" rows="3" class="w-full px-4 py-3 rounded-lg"></textarea>
+                        </div>
+                        <button id="save-contact" class="btn-primary px-8 py-3 rounded-lg">Save Contact &amp; Footer</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GALLERY TAB -->
+            <div class="tab-panel hidden" id="tab-gallery">
+                <div class="card p-8 mb-8">
+                    <h2 class="text-xl font-bold mb-6">Add Gallery Photo</h2>
+                    <div class="grid md:grid-cols-2 gap-5">
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">Title</label>
+                            <input id="gallery-title" class="w-full px-4 py-3 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">Subtitle</label>
+                            <input id="gallery-subtitle" class="w-full px-4 py-3 rounded-lg">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-semibold mb-1">Photo</label>
+                            <input type="file" id="gallery-file" accept="image/*" class="w-full text-sm">
+                        </div>
+                    </div>
+                    <button id="add-gallery" class="btn-primary px-8 py-3 rounded-lg mt-5 flex items-center gap-2">
+                        <span>Add to Gallery</span><span id="gallery-add-spinner" class="spinner hidden"></span>
+                    </button>
+                </div>
+                <div id="gallery-list" class="grid md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+            </div>
+
+            <!-- TRIPS TAB -->
+            <div class="tab-panel hidden" id="tab-trips">
+                <div class="card p-8 mb-8">
+                    <h2 class="text-xl font-bold mb-6">Add Upcoming Trip</h2>
+                    <div class="grid md:grid-cols-2 gap-5">
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">Category (e.g. HIMALAYAN TREK)</label>
+                            <input id="trip-category" class="w-full px-4 py-3 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">Trip Title</label>
+                            <input id="trip-title" class="w-full px-4 py-3 rounded-lg">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-semibold mb-1">Description</label>
+                            <textarea id="trip-description" rows="2" class="w-full px-4 py-3 rounded-lg"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">Price (e.g. ₹8,500)</label>
+                            <input id="trip-price" class="w-full px-4 py-3 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">Photo</label>
+                            <input type="file" id="trip-file" accept="image/*" class="w-full text-sm">
+                        </div>
+                    </div>
+                    <button id="add-trip" class="btn-primary px-8 py-3 rounded-lg mt-5 flex items-center gap-2">
+                        <span>Add Trip</span><span id="trip-add-spinner" class="spinner hidden"></span>
+                    </button>
+                </div>
+                <div id="trips-list" class="grid md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="admin.js"></script>
+</body>
+</html>
