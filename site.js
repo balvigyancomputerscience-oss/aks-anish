@@ -5,6 +5,9 @@
 // page if Supabase isn't reachable, so the site never looks broken.
 // ============================================================
 
+let currentLightboxImages = [];
+let currentLightboxIndex = -1;
+
 document.addEventListener('DOMContentLoaded', () => {
     initMobileMenu();
     initContactForm();
@@ -121,10 +124,17 @@ async function loadGallery() {
     const grid = document.getElementById('gallery-grid');
     if (!grid) return;
     try {
-        const { data, error } = await supabaseClient
+        const limitAttr = grid.dataset.limit;
+        let query = supabaseClient
             .from('gallery')
             .select('*')
             .order('sort_order', { ascending: true });
+
+        if (limitAttr) {
+            query = query.limit(parseInt(limitAttr, 10));
+        }
+
+        const { data, error } = await query;
 
         if (error || !data || data.length === 0) {
             grid.innerHTML = `<p class="col-span-full text-center text-navy/50">Gallery coming soon.</p>`;
@@ -184,14 +194,9 @@ async function loadTrips() {
                     ${trip.description ? `<p class="text-navy/60 mb-4">${escapeHtml(trip.description)}</p>` : ''}
                     <div class="flex justify-between items-center gap-3">
                         <span class="text-navy font-bold text-lg">${escapeHtml(trip.price || '')}</span>
-                        <div class="flex items-center gap-2">
-                            <button class="trip-open-gallery bg-white border-2 border-teal text-teal text-sm font-semibold px-4 py-2.5 rounded-full hover:bg-teal hover:text-white transition" data-trip-id="${trip.id}" data-trip-title="${escapeHtml(trip.title)}" data-trip-category="${escapeHtml(trip.category || '')}">
-                                <i class="fa-solid fa-images mr-1"></i> View Gallery
-                            </button>
-                            <a href="#contact" class="bg-amber text-navy p-3 rounded-full hover:bg-navy hover:text-white transition">
-                                <i class="fa-solid fa-arrow-right"></i>
-                            </a>
-                        </div>
+                        <a href="#contact" class="bg-amber text-navy text-sm font-bold px-6 py-2.5 rounded-full hover:bg-navy hover:text-white transition flex items-center gap-2 whitespace-nowrap">
+                            Book Now <i class="fa-solid fa-arrow-right text-xs"></i>
+                        </a>
                     </div>
                 </div>
             </div>
@@ -248,18 +253,24 @@ async function openAlbumModal(table, foreignKey, id, title, subtitle) {
             .order('sort_order', { ascending: true });
 
         if (error || !data || data.length === 0) {
+            currentLightboxImages = [];
             grid.innerHTML = `<div class="col-span-full text-center text-white/60 py-10">No extra photos added yet.</div>`;
             return;
         }
 
+        currentLightboxImages = data.map(img => img.image_url);
+
         grid.innerHTML = data.map((img, i) => `
-            <div class="trip-modal-photo rounded-xl overflow-hidden cursor-pointer shadow-lg ${i === 0 ? 'md:col-span-2 md:row-span-2' : ''}" data-url="${escapeHtml(img.image_url)}">
+            <div class="trip-modal-photo rounded-xl overflow-hidden cursor-pointer shadow-lg ${i === 0 ? 'md:col-span-2 md:row-span-2' : ''}" data-index="${i}">
                 <img src="${escapeHtml(img.image_url)}" class="w-full h-full object-cover hover:scale-105 transition duration-500" style="min-height:160px;">
             </div>
         `).join('');
 
         grid.querySelectorAll('.trip-modal-photo').forEach(el => {
-            el.addEventListener('click', () => openLightbox(el.dataset.url));
+            el.addEventListener('click', () => {
+                const idx = parseInt(el.dataset.index, 10);
+                openLightbox(idx);
+            });
         });
     } catch (err) {
         grid.innerHTML = `<div class="col-span-full text-center text-white/60 py-10">Couldn't load photos right now.</div>`;
@@ -274,22 +285,81 @@ function initLightbox() {
     const lightbox = document.getElementById('lightbox');
     const backdrop = document.getElementById('lightbox-backdrop');
     const closeBtn = document.getElementById('lightbox-close');
+    const prevBtn = document.getElementById('lightbox-prev');
+    const nextBtn = document.getElementById('lightbox-next');
     if (!lightbox) return;
 
     const close = () => {
         lightbox.classList.add('hidden');
         lightbox.classList.remove('flex');
     };
+
+    const showPrev = (e) => {
+        if (e) e.stopPropagation();
+        if (currentLightboxImages.length <= 1) return;
+        currentLightboxIndex = (currentLightboxIndex - 1 + currentLightboxImages.length) % currentLightboxImages.length;
+        document.getElementById('lightbox-img').src = currentLightboxImages[currentLightboxIndex];
+    };
+
+    const showNext = (e) => {
+        if (e) e.stopPropagation();
+        if (currentLightboxImages.length <= 1) return;
+        currentLightboxIndex = (currentLightboxIndex + 1) % currentLightboxImages.length;
+        document.getElementById('lightbox-img').src = currentLightboxImages[currentLightboxIndex];
+    };
+
     backdrop.addEventListener('click', close);
     closeBtn.addEventListener('click', close);
+    if (prevBtn) prevBtn.addEventListener('click', showPrev);
+    if (nextBtn) nextBtn.addEventListener('click', showNext);
+
     document.addEventListener('keydown', (e) => {
+        if (lightbox.classList.contains('hidden')) return;
         if (e.key === 'Escape') close();
+        if (e.key === 'ArrowLeft') showPrev();
+        if (e.key === 'ArrowRight') showNext();
     });
+
+    // Touch Swipe Navigation for Mobile
+    let touchStartX = 0;
+    let touchEndX = 0;
+
+    lightbox.addEventListener('touchstart', (e) => {
+        touchStartX = e.changedTouches[0].screenX;
+    }, { passive: true });
+
+    lightbox.addEventListener('touchend', (e) => {
+        touchEndX = e.changedTouches[0].screenX;
+        const swipeThreshold = 50; // minimum pixels to count as swipe
+        if (touchEndX < touchStartX - swipeThreshold) {
+            // Swipe Left -> Next Image
+            showNext();
+        } else if (touchEndX > touchStartX + swipeThreshold) {
+            // Swipe Right -> Previous Image
+            showPrev();
+        }
+    }, { passive: true });
 }
 
-function openLightbox(url) {
+function openLightbox(index) {
     const lightbox = document.getElementById('lightbox');
-    document.getElementById('lightbox-img').src = url;
+    currentLightboxIndex = index;
+    document.getElementById('lightbox-img').src = currentLightboxImages[currentLightboxIndex];
     lightbox.classList.remove('hidden');
     lightbox.classList.add('flex');
+    
+    updateLightboxArrows();
+}
+
+function updateLightboxArrows() {
+    const prevBtn = document.getElementById('lightbox-prev');
+    const nextBtn = document.getElementById('lightbox-next');
+    if (!prevBtn || !nextBtn) return;
+    if (currentLightboxImages.length <= 1) {
+        prevBtn.style.display = 'none';
+        nextBtn.style.display = 'none';
+    } else {
+        prevBtn.style.display = '';
+        nextBtn.style.display = '';
+    }
 }

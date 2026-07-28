@@ -165,7 +165,7 @@
             <div class="tab-panel hidden" id="tab-gallery">
                 <div class="card p-8 mb-8">
                     <h2 class="text-xl font-bold mb-6">Add Gallery Photo</h2>
-                    <div class="grid md:grid-cols-2 gap-5">
+                    <div class="grid md:grid-cols-3 gap-5">
                         <div>
                             <label class="block text-sm font-semibold mb-1">Title</label>
                             <input id="gallery-title" class="w-full px-4 py-3 rounded-lg">
@@ -174,7 +174,11 @@
                             <label class="block text-sm font-semibold mb-1">Subtitle</label>
                             <input id="gallery-subtitle" class="w-full px-4 py-3 rounded-lg">
                         </div>
-                        <div class="md:col-span-2">
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">Position / Order</label>
+                            <input id="gallery-sort-order" type="number" value="0" class="w-full px-4 py-3 rounded-lg">
+                        </div>
+                        <div class="md:col-span-3">
                             <label class="block text-sm font-semibold mb-1">Photo</label>
                             <input type="file" id="gallery-file" accept="image/*" class="w-full text-sm">
                         </div>
@@ -190,7 +194,7 @@
             <div class="tab-panel hidden" id="tab-trips">
                 <div class="card p-8 mb-8">
                     <h2 class="text-xl font-bold mb-6">Add Upcoming Trip</h2>
-                    <div class="grid md:grid-cols-2 gap-5">
+                    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
                         <div>
                             <label class="block text-sm font-semibold mb-1">Category (e.g. HIMALAYAN TREK)</label>
                             <input id="trip-category" class="w-full px-4 py-3 rounded-lg">
@@ -199,7 +203,11 @@
                             <label class="block text-sm font-semibold mb-1">Trip Title</label>
                             <input id="trip-title" class="w-full px-4 py-3 rounded-lg">
                         </div>
-                        <div class="md:col-span-2">
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">Position / Order</label>
+                            <input id="trip-sort-order" type="number" value="0" class="w-full px-4 py-3 rounded-lg">
+                        </div>
+                        <div class="md:col-span-2 lg:col-span-3">
                             <label class="block text-sm font-semibold mb-1">Description</label>
                             <textarea id="trip-description" rows="2" class="w-full px-4 py-3 rounded-lg"></textarea>
                         </div>
@@ -207,7 +215,7 @@
                             <label class="block text-sm font-semibold mb-1">Price (e.g. ₹8,500)</label>
                             <input id="trip-price" class="w-full px-4 py-3 rounded-lg">
                         </div>
-                        <div>
+                        <div class="lg:col-span-2">
                             <label class="block text-sm font-semibold mb-1">Photo</label>
                             <input type="file" id="trip-file" accept="image/*" class="w-full text-sm">
                         </div>

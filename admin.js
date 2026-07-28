@@ -162,7 +162,11 @@ async function loadGalleryList() {
             <img src="${item.image_url}" class="w-full h-40 object-cover">
             <div class="p-4">
                 <h3 class="font-bold">${escapeHtml(item.title)}</h3>
-                <p class="text-sm text-navy/50 mb-3">${escapeHtml(item.subtitle || '')}</p>
+                <p class="text-sm text-navy/50 mb-2">${escapeHtml(item.subtitle || '')}</p>
+                <div class="flex items-center gap-2 mb-3">
+                    <label class="text-xs font-semibold text-navy/70">Position / Order:</label>
+                    <input type="number" value="${item.sort_order || 0}" class="w-20 text-xs px-2 py-1 rounded border border-navy/20" onchange="updateSortOrder('gallery', '${item.id}', this.value)">
+                </div>
                 <button class="bg-navy text-white text-sm px-4 py-2 rounded-lg w-full mb-2" onclick="togglePhotoManager('gallery', '${item.id}')">
                     <i class="fa-solid fa-images mr-1"></i> Manage Album Photos
                 </button>
@@ -183,6 +187,8 @@ async function loadGalleryList() {
 async function addGalleryItem() {
     const title = document.getElementById('gallery-title').value.trim();
     const subtitle = document.getElementById('gallery-subtitle').value.trim();
+    const sortOrderVal = document.getElementById('gallery-sort-order').value;
+    const sortOrder = parseInt(sortOrderVal, 10) || 0;
     const file = document.getElementById('gallery-file').files[0];
     const spinner = document.getElementById('gallery-add-spinner');
 
@@ -191,10 +197,11 @@ async function addGalleryItem() {
     spinner.classList.remove('hidden');
     try {
         const imageUrl = await uploadImage(file);
-        const { error } = await supabaseClient.from('gallery').insert({ title, subtitle, image_url: imageUrl, sort_order: 999 });
+        const { error } = await supabaseClient.from('gallery').insert({ title, subtitle, image_url: imageUrl, sort_order: sortOrder });
         if (error) throw error;
         document.getElementById('gallery-title').value = '';
         document.getElementById('gallery-subtitle').value = '';
+        document.getElementById('gallery-sort-order').value = '0';
         document.getElementById('gallery-file').value = '';
         loadGalleryList();
         showToast('Gallery photo added!');
@@ -296,8 +303,12 @@ async function loadTripsList() {
             <div class="p-4">
                 <span class="text-teal text-xs font-bold">${escapeHtml(trip.category || '')}</span>
                 <h3 class="font-bold">${escapeHtml(trip.title)}</h3>
-                <p class="text-sm text-navy/50 mb-2">${escapeHtml(trip.description || '')}</p>
-                <p class="font-bold mb-3">${escapeHtml(trip.price || '')}</p>
+                <p class="text-sm text-navy/50 mb-1">${escapeHtml(trip.description || '')}</p>
+                <p class="font-bold mb-2">${escapeHtml(trip.price || '')}</p>
+                <div class="flex items-center gap-2 mb-3">
+                    <label class="text-xs font-semibold text-navy/70">Position / Order:</label>
+                    <input type="number" value="${trip.sort_order || 0}" class="w-20 text-xs px-2 py-1 rounded border border-navy/20" onchange="updateSortOrder('trip', '${trip.id}', this.value)">
+                </div>
                 <button class="bg-navy text-white text-sm px-4 py-2 rounded-lg w-full mb-2" onclick="togglePhotoManager('trip', '${trip.id}')">
                     <i class="fa-solid fa-images mr-1"></i> Manage Gallery Photos
                 </button>
@@ -320,6 +331,8 @@ async function addTripItem() {
     const title = document.getElementById('trip-title').value.trim();
     const description = document.getElementById('trip-description').value.trim();
     const price = document.getElementById('trip-price').value.trim();
+    const sortOrderVal = document.getElementById('trip-sort-order').value;
+    const sortOrder = parseInt(sortOrderVal, 10) || 0;
     const file = document.getElementById('trip-file').files[0];
     const spinner = document.getElementById('trip-add-spinner');
 
@@ -328,12 +341,13 @@ async function addTripItem() {
     spinner.classList.remove('hidden');
     try {
         const imageUrl = await uploadImage(file);
-        const { error } = await supabaseClient.from('trips').insert({ category, title, description, price, image_url: imageUrl, sort_order: 999 });
+        const { error } = await supabaseClient.from('trips').insert({ category, title, description, price, image_url: imageUrl, sort_order: sortOrder });
         if (error) throw error;
         document.getElementById('trip-category').value = '';
         document.getElementById('trip-title').value = '';
         document.getElementById('trip-description').value = '';
         document.getElementById('trip-price').value = '';
+        document.getElementById('trip-sort-order').value = '0';
         document.getElementById('trip-file').value = '';
         loadTripsList();
         showToast('Trip added!');
@@ -357,3 +371,20 @@ function escapeHtml(str) {
     div.textContent = str;
     return div.innerHTML;
 }
+
+async function updateSortOrder(kind, id, value) {
+    const tableName = kind === 'gallery' ? 'gallery' : 'trips';
+    const orderVal = parseInt(value, 10) || 0;
+    const { error } = await supabaseClient.from(tableName).update({ sort_order: orderVal }).eq('id', id);
+    if (error) {
+        alert('Error updating order: ' + error.message);
+        return;
+    }
+    showToast('Position updated!');
+    if (kind === 'gallery') {
+        loadGalleryList();
+    } else {
+        loadTripsList();
+    }
+}
+window.updateSortOrder = updateSortOrder;

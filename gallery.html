@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AKS | Adventure Gallery — All Expeditions</title>
+    <meta name="description" content="A complete collection of trails, treks, camps and summits explored by AKS.">
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" href="assets/logo.jpg">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --navy: #1C3D5A;
+            --turquoise: #77C9D4;
+            --teal: #57A99A;
+            --amber: #F0A500;
+            --cream: #FDF5E6;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--cream);
+            color: var(--navy);
+            overflow-x: hidden;
+        }
+
+        h1, h2, h3, .font-serif { font-family: 'Playfair Display', serif; }
+
+        .bg-navy { background-color: var(--navy); }
+        .bg-teal { background-color: var(--teal); }
+        .bg-amber { background-color: var(--amber); }
+        .bg-turquoise { background-color: var(--turquoise); }
+        .bg-cream { background-color: var(--cream); }
+        .text-navy { color: var(--navy); }
+        .text-teal { color: var(--teal); }
+        .text-amber { color: var(--amber); }
+        .text-turquoise { color: var(--turquoise); }
+        .border-amber { border-color: var(--amber); }
+
+        .nav-link { position: relative; }
+        .nav-link::after {
+            content: '';
+            display: block;
+            width: 0;
+            height: 2px;
+            background: var(--amber);
+            transition: width .3s;
+        }
+        .nav-link:hover::after { width: 100%; }
+
+        .gallery-img { transition: transform 0.6s ease; }
+        .gallery-item:hover .gallery-img { transform: scale(1.08); }
+
+        .btn-primary {
+            background: var(--amber);
+            color: var(--navy);
+            font-weight: 700;
+            transition: all .3s ease;
+        }
+        .btn-primary:hover {
+            background: #d99200;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(240,165,0,.5);
+        }
+        .btn-outline {
+            border: 2px solid var(--teal);
+            color: var(--teal);
+            transition: all .3s ease;
+        }
+        .btn-outline:hover { background: var(--teal); color: white; }
+
+        .skeleton {
+            background: linear-gradient(90deg, #eee 25%, #f5f5f5 50%, #eee 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation -->
+    <nav class="fixed w-full z-50 bg-cream/95 backdrop-blur-md border-b border-navy/10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-20 items-center">
+                <a href="index.html#home" class="flex items-center gap-3">
+                    <img src="assets/logo.jpg" alt="AKS Logo" class="w-12 h-12 rounded-full object-cover border-2 border-amber">
+                    <span class="text-xl font-serif font-bold text-navy leading-tight hidden sm:block">
+                        AKS<br><span class="text-[10px] tracking-widest font-sans font-semibold text-teal">ADVENTUROUS &amp; KREATIVE SOULS</span>
+                    </span>
+                </a>
+                <div class="hidden md:flex items-center space-x-10">
+                    <a href="index.html#home" class="nav-link text-navy font-medium">Home</a>
+                    <a href="index.html#gallery" class="nav-link text-navy font-medium">Gallery</a>
+                    <a href="index.html#trips" class="nav-link text-navy font-medium">Upcoming Trips</a>
+                    <a href="index.html#about" class="nav-link text-navy font-medium">About Us</a>
+                    <a href="index.html#contact" class="bg-teal text-white px-6 py-2.5 rounded-full hover:bg-navy transition duration-300 shadow-lg font-semibold">Plan Your Trip</a>
+                </div>
+                <div class="md:hidden flex items-center">
+                    <button id="mobile-menu-button" class="text-navy text-2xl">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div id="mobile-menu" class="hidden bg-cream w-full border-t border-navy/10 p-4">
+            <a href="index.html#home" class="block py-2 text-navy font-medium">Home</a>
+            <a href="index.html#gallery" class="block py-2 text-navy font-medium">Gallery</a>
+            <a href="index.html#trips" class="block py-2 text-navy font-medium">Upcoming Trips</a>
+            <a href="index.html#about" class="block py-2 text-navy font-medium">About Us</a>
+            <a href="index.html#contact" class="block py-2 text-amber font-bold">Plan Your Trip</a>
+        </div>
+    </nav>
+
+    <!-- Header Banner -->
+    <section class="relative pt-36 pb-20 bg-navy text-white flex items-center justify-center overflow-hidden">
+        <div class="absolute inset-0 z-0">
+            <img src="https://images.pexels.com/photos/1365425/pexels-photo-1365425.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1080&w=1920" alt="AKS Adventure" class="w-full h-full object-cover opacity-30">
+            <div class="absolute inset-0 bg-navy/60"></div>
+        </div>
+
+        <div class="relative z-10 text-center px-4">
+            <h1 class="text-4xl md:text-5xl font-bold font-serif mb-2 leading-tight">Adventure Gallery</h1>
+            <p class="text-lg text-white/80 max-w-md mx-auto font-light">Explore all our treks, trails, camps and expeditions</p>
+        </div>
+    </section>
+
+    <!-- Breadcrumb back link -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+        <a href="index.html" class="text-teal hover:text-navy font-semibold inline-flex items-center gap-2 transition">
+            <i class="fa-solid fa-arrow-left text-sm"></i> Back to Home
+        </a>
+    </div>
+
+    <!-- Gallery Section (Full Grid) -->
+    <section class="py-12 bg-cream">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div id="gallery-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- populated by site.js -->
+                <div class="skeleton rounded-2xl h-80"></div>
+                <div class="skeleton rounded-2xl h-80"></div>
+                <div class="skeleton rounded-2xl h-80"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-navy text-white pt-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid md:grid-cols-4 gap-12 pb-12 border-b border-white/10">
+                <div class="md:col-span-2">
+                    <a href="index.html#home" class="flex items-center gap-3 mb-5">
+                        <img src="assets/logo.jpg" alt="AKS" class="w-12 h-12 rounded-full object-cover border-2 border-amber">
+                        <span class="text-2xl font-serif font-bold">AKS</span>
+                    </a>
+                    <p id="footer-text" class="text-white/60 leading-relaxed mb-6 max-w-sm">Adventurous &amp; Kreative Souls — crafting treks, camps and journeys that bring you closer to the wild.</p>
+                </div>
+                <div>
+                    <h4 class="font-serif text-lg mb-5">Quick Links</h4>
+                    <ul class="space-y-3 text-white/60 text-sm">
+                        <li><a href="index.html#home" class="hover:text-amber transition">Home</a></li>
+                        <li><a href="index.html#gallery" class="hover:text-amber transition">Gallery</a></li>
+                        <li><a href="index.html#trips" class="hover:text-amber transition">Upcoming Trips</a></li>
+                        <li><a href="index.html#about" class="hover:text-amber transition">About Us</a></li>
+                        <li><a href="index.html#contact" class="hover:text-amber transition">Contact</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-serif text-lg mb-5">Contact</h4>
+                    <ul class="space-y-3 text-white/60 text-sm">
+                        <li id="footer-address">Dehradun, Uttarakhand, India</li>
+                        <li id="footer-phone">+91 98765 43210</li>
+                        <li id="footer-email">explore@aksadventures.com</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="py-6 flex flex-col sm:flex-row justify-between items-center gap-2 text-white/40 text-sm">
+                <p>© 2026 AKS — Adventurous &amp; Kreative Souls. All Rights Reserved.</p>
+                <a href="admin.html" class="hover:text-amber transition">Admin</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Trip Gallery Modal -->
+    <div id="trip-modal" class="fixed inset-0 z-[999] hidden">
+        <div id="trip-modal-backdrop" class="absolute inset-0 bg-navy/90 backdrop-blur-sm"></div>
+        <div class="relative z-10 max-w-5xl mx-auto h-full flex flex-col py-8 px-4">
+            <div class="flex items-start justify-between mb-6 px-2">
+                <div>
+                    <span id="trip-modal-category" class="text-amber font-bold uppercase tracking-widest text-xs"></span>
+                    <h3 id="trip-modal-title" class="text-2xl md:text-4xl font-bold text-white font-serif mt-1"></h3>
+                </div>
+                <button id="trip-modal-close" class="text-white/70 hover:text-amber text-3xl leading-none flex-shrink-0 ml-4">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div id="trip-modal-body" class="flex-1 overflow-y-auto px-2 pb-4">
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4" id="trip-modal-grid">
+                    <!-- populated by site.js -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lightbox for a single enlarged photo -->
+    <div id="lightbox" class="fixed inset-0 z-[1000] hidden items-center justify-center p-6">
+        <div id="lightbox-backdrop" class="absolute inset-0 bg-black/90"></div>
+        
+        <!-- Left Arrow -->
+        <button id="lightbox-prev" class="hidden md:flex absolute left-4 md:left-8 top-1/2 -translate-y-1/2 z-20 text-white bg-black/40 hover:bg-black/70 hover:text-amber w-12 h-12 rounded-full items-center justify-center focus:outline-none transition cursor-pointer">
+            <i class="fa-solid fa-chevron-left text-xl"></i>
+        </button>
+
+        <img id="lightbox-img" src="" class="relative z-10 max-w-[85%] max-h-[85vh] rounded-lg shadow-2xl object-contain">
+
+        <!-- Right Arrow -->
+        <button id="lightbox-next" class="hidden md:flex absolute right-4 md:right-8 top-1/2 -translate-y-1/2 z-20 text-white bg-black/40 hover:bg-black/70 hover:text-amber w-12 h-12 rounded-full items-center justify-center focus:outline-none transition cursor-pointer">
+            <i class="fa-solid fa-chevron-right text-xl"></i>
+        </button>
+
+        <button id="lightbox-close" class="absolute top-6 right-6 z-20 text-white/80 hover:text-amber text-3xl cursor-pointer">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="site.js"></script>
+</body>
+</html>
